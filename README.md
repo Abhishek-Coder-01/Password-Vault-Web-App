@@ -53,3 +53,10 @@ A **secure** and **user-friendly** web application to store, manage, and retriev
 ```bash
 git clone https://github.com/your-username/password-vault-web-app.git
 cd password-vault-web-app
+
+---
+
+<div align="center">
+  <p>Made with ❤️ and 🔒 by the <strong>Password Vault Team</strong></p>
+</div>
+
