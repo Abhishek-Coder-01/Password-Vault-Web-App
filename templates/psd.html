@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Password Vault</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+  <style>
+    /* All your existing styles remain the same */
+    #menu-but {
+      border-radius: 50%;
+    }
+
+    #menu-but:hover {
+      transition: all 0.2s ease;
+      background-color: #e0e1e5;
+      box-shadow: 0 4px 8px rgba(120, 116, 116, 0.1);
+      transform: scale(1.05);
+    }
+
+    .password-field {
+      font-family: monospace;
+    }
+
+    .copy-notification {
+
+      position: fixed;
+      top: 20px;
+      right: 20px;
+
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      opacity: 0;
+      transform: translateX(100%);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 1000;
+    }
+
+    .copy-notification.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .deleted-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      opacity: 0;
+      transform: translateX(100%);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 1000;
+    }
+
+    .deleted-notification.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .edit-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      opacity: 0;
+      transform: translateX(100%);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 1000;
+    }
+
+    .edit-notification.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .action-menu-popup {
+      position: fixed;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 100;
+      display: none;
+      width: 158px;
+    }
+
+    .action-menu-popup.show {
+      display: block;
+    }
+
+    @media (max-width: 397px) {
+      .action-menu-popup {
+        top: 486.582px;
+        left: 145.031px;
+      }
+    }
+
+    .action-menu-popup button {
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      color: #333;
+      border: none;
+      background: none;
+      cursor: pointer;
+    }
+
+    .action-menu-popup button:hover {
+      background: #f0f1f5;
+    }
+
+    .action-menu-popup button:first-child {
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+    }
+
+    .action-menu-popup button:last-child {
+      border-bottom-left-radius: 8px;
+      border-bottom-right-radius: 8px;
+    }
+
+    .edit-form {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .edit-form.show {
+      display: flex;
+    }
+
+    .edit-form-content {
+      background: white;
+      /* Light mode */
+      padding: 20px;
+      border-radius: 10px;
+      width: 400px;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* Dark mode override */
+    .dark .edit-form-content {
+      background: #1f2937;
+      /* Tailwind gray-800 */
+      color: #f3f4f6;
+      /* Tailwind gray-100 */
+    }
+
+
+    #password-table-container {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .loader {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #006eff;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 868px) {
+      .welocm_psd_vault {
+        font-size: 46px !important;
+      }
+    }
+
+    @media (max-width: 840px) {
+      .welocm_psd_vault {
+        font-size: 43px !important;
+      }
+    }
+
+
+
+    @media (max-width: 472px) {
+      #right_side {
+        padding: 1.5rem;
+      }
+
+      #bg_change {
+        margin: 0px 2px;
+      }
+    }
+
+    #helo {
+      position: absolute;
+      top: 84px;
+      right: -14px;
+      z-index: 100;
+    }
+
+
+
+
+
+
+    @media (max-width: 453px) {
+      #helo {
+        top: 82px;
+        right: -10px;
+      }
+
+      .font_h1 {
+        font-size: 22px !important;
+      }
+
+      #lock {
+        padding: 8px;
+      }
+    }
+
+    @media (max-width: 418px) {
+      .font_h1 {
+        font-size: 20px !important;
+      }
+
+      #helo {
+        top: 82px;
+        right: -10px;
+      }
+    }
+
+    @media (max-width: 394px) {
+      #helo {
+        top: 105px;
+        right: -10px;
+      }
+    }
+
+    .main {
+      display: none;
+    }
+
+    @media (max-width: 712px) {
+      .main {
+        display: block;
+      }
+    }
+
+    @media (max-width: 550px) {
+      @media (max-width: 550px) {
+        .helo {
+          grid-template-columns: 1fr !important;
+          /* override 2 columns */
+        }
+      }
+    }
+
+
+    /* Enhanced Button Styles */
+    .Btn {
+      --btn-color: #f63b3b;
+      --btn-hover-color: #f63b3b;
+      --btn-active-color: red;
+
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      width: 45px;
+      height: 45px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+      background-color: white;
+      padding: 0;
+      margin: 0;
+    }
+
+    .sign {
+      width: 100%;
+      transition: all 0.4s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-origin: center;
+    }
+
+    .sign svg {
+      width: 17px;
+      height: 17px;
+      transition: transform 0.3s ease;
+    }
+
+    .sign svg path {
+      fill: var(--btn-color);
+      transition: fill 0.3s ease;
+    }
+
+    .logout-btn {
+      transition: all 0.3s ease;
+    }
+
+    .logout-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    .text {
+      position: absolute;
+      right: 0%;
+      width: 0%;
+      opacity: 0;
+      color: white;
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      white-space: nowrap;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    .Btn:hover {
+      background-color: var(--btn-hover-color);
+      width: 110px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    }
+
+    .Btn:hover .sign {
+      width: 30%;
+      padding-left: 15px;
+      transform: scale(0.9);
+    }
+
+    .Btn:hover .sign svg path {
+      fill: white;
+    }
+
+    .Btn:hover .text {
+      opacity: 1;
+      width: 70%;
+      padding-right: 15px;
+    }
+
+    .Btn:active {
+      transform: translate(1px, 1px);
+      background-color: var(--btn-active-color);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .Btn:focus-visible {
+      outline: 2px solid var(--btn-color);
+      outline-offset: 2px;
+    }
+
+    .Btn:hover .sign svg {
+      transform: translateX(2px);
+    }
+
+    @keyframes pulse-glow {
+      0% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+      }
+
+      70% {
+        box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+      }
+    }
+
+    .Btn.pulse {
+      animation: pulse-glow 2s infinite;
+    }
+
+    @media (max-width: 480px) {
+      .Btn:hover {
+        width: 102px;
+        border-radius: 9px;
+      }
+
+      .text {
+        font-size: 0.8rem;
+      }
+    }
+
+    @media (max-width: 580px) {
+
+      #warring_div {
+        display: block !important;
+      }
+
+      #main_content {
+        display: none !important;
+      }
+
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      darkMode: 'class', // dark mode enable
+      theme: {
+        extend: {
+          screens: {
+            'xl1000': '1000px', // custom breakpoint
+          }
+        }
+      }
+    }
+  </script>
+
+</head>
+
+<body class="bg-[#DBDEE5] dark:bg-gray-900 dark:text-gray-100">
+
+
+  <!-- warring Nottification of mobile devices  -->
+
+  <div class="hidden  flex items-center justify-center min-h-screen" id="warring_div" style="background-color: red;">
+    <!-- Warning Modal -->
+    <div id="warningModal" class="fixed inset-0 flex items-center justify-center bg-black/50">
+      <div id="modalContent"
+        class="bg-white w-96 rounded-xl shadow-xl overflow-hidden transform scale-90 opacity-0 transition-all duration-300 ease-out">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between bg-gray-800 px-4 py-2">
+          <div class="flex gap-2">
+            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 text-center">
+
+          <div class="flex justify-center mb-4">
+            <div class="relative flex flex-col items-center">
+              <!-- Triangle -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-red-500" fill="currentColor"
+                viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.72-1.36 3.485 0l6.518 11.59c.75 1.336-.213 3.01-1.742 3.01H3.48c-1.53 0-2.493-1.674-1.743-3.01l6.52-11.59zM10 13a1 1 0 100 2 1 1 0 000-2zm-.75-6.75a.75.75 0 011.5 0v4.5a.75.75 0 01-1.5 0v-4.5z"
+                  clip-rule="evenodd" />
+              </svg>
+
+            </div>
+          </div>
+
+          <h2 class="text-2xl font-bold text-gray-800 mb-2">WARNING !!!</h2>
+          <p class="text-gray-500 text-sm font-semibold mb-6">
+            This page is available in read-only mode on tablets and desktop devices.
+          </p>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-gray-100 px-6 py-3 text-center">
+          <p class="text-xs text-gray-500">© 2025 System Admin. All rights reserved.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- End of Warning Modal -->
+
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="fixed flex inset-0 bg-black bg-opacity-50 items-center justify-center z-50 hidden">
+    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl text-center">
+      <div class="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4">
+      </div>
+      <p class="text-gray-700 dark:text-gray-300 font-semibold" id="loading-text">Signing out...</p>
+    </div>
+  </div>
+
+
+  <!-- Notifications -->
+
+  <div id="copy-notification" class="copy-notification  flex items-center gap-2">
+    <i class="fas fa-check-circle"></i>
+    <span>Password copied to clipboard!</span>
+  </div>
+
+
+  <div id="deleted-notification" class="deleted-notification flex items-center gap-2">
+    <i class="fas fa-info-circle"></i>
+    <span>Password deleted successfully!</span>
+  </div>
+
+
+  <div id="edit-notification" class="edit-notification flex items-center gap-2">
+    <i class="fas fa-check-circle"></i>
+    <span>Password updated successfully!</span>
+  </div>
+
+
+  <!-- Action Menu Popup -->
+  <div id="action-menu" class="action-menu-popup">
+    <button id="view-password-btn">View Password</button>
+    <button id="copy-password-btn">Copy Password</button>
+    <button id="edit-password-btn">Edit</button>
+    <button id="delete-password-btn">Delete</button>
+  </div>
+
+  <!-- Edit Form -->
+  <div id="edit-form" class="edit-form">
+    <div class="edit-form-content bg-white dark:bg-gray-700 p-6 rounded-xl shadow-lg w-[400px]">
+      <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Edit Password</h2>
+
+      <form id="edit-password-form" class="space-y-3">
+        <input type="hidden" id="edit-id">
+
+        <input type="text" id="edit-website" placeholder="Website" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 
+               text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 
+               focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+
+        <input type="text" id="edit-username" placeholder="Username" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 
+               text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 
+               focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+
+        <input type="password" id="edit-password" placeholder="Password" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 
+               text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 
+               focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+
+        <div class="flex justify-end gap-2">
+          <!-- Cancel Button -->
+          <button type="button" id="cancel-edit" class="bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 
+                 text-gray-800 dark:text-gray-100 py-2 px-4 rounded-lg font-medium">
+            Cancel
+          </button>
+
+          <!-- Save Button -->
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium">
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <div class="min-h-screen flex items-center justify-center p-4 dark:bg-gray-900 dark:text-gray-100" id="main_content">
+    <div class="w-full max-w-6xl">
+      <!-- Navigation -->
+      <nav class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-4 mb-6">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-3 rounded-xl">
+              <i class="fas fa-shield-halved text-white text-2xl"></i>
+            </div>
+            <div>
+              <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Password Vault</h1>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Advanced Security Manager</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <!-- Search -->
+            <div class="hidden md:flex relative">
+              <input type="text" id="search-input" placeholder="Search passwords..."
+                class="pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+              <!-- Suggestions dropdown -->
+              <div id="search-suggestions"
+                class="absolute left-0 top-full mt-1 w-64 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 hidden">
+              </div>
+            </div>
+
+            <!-- Theme Toggle -->
+            <button id="theme-toggle-dashboard"
+              class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+              <i class="fas fa-moon dark:hidden"></i>
+              <i class="fas fa-sun hidden dark:inline"></i>
+            </button>
+
+            <!-- Logout -->
+            <button id="logoutBtnDesktop"
+              class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2">
+              <i class="fas fa-sign-out-alt"></i>
+              <span class="hidden sm:inline">Logout</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Stats -->
+      <div class="helo grid grid-cols-2 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg border border-gray-100 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Total Passwords</p>
+              <p class="text-2xl font-bold text-gray-800 dark:text-white" id="total-passwords">0</p>
+            </div>
+            <i class="fas fa-key text-2xl text-indigo-500"></i>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg border border-gray-100 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Security Score</p>
+              <p class="text-2xl font-bold text-green-600" id="security-score">A+</p>
+            </div>
+            <i class="fas fa-shield-check text-2xl text-green-500"></i>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Main Content -->
+      <div class="bg-white shadow-xl rounded-2xl w-full  mx-auto flex overflow-hidden" id="bg_change">
+
+        <!-- Left Section -->
+        <div
+          class="hidden [@media(min-width:1001px)]:flex w-[47%] bg-gradient-to-br from-indigo-50 to-blue-50 dark:bg-gray-800 dark:bg-none dark:text-gray-100 p-12 flex-col justify-center shadow-lg relative overflow-hidden"
+          id="left_side">
+
+          <!-- Animated background elements -->
+          <div class="absolute top-0 left-0 w-full h-full opacity-30">
+            <div class="absolute top-10% left-10% w-20 h-20 rounded-full bg-blue-400 animate-pulse"></div>
+            <div class="absolute top-70% left-80% w-16 h-16 rounded-full bg-indigo-400 animate-bounce delay-700"></div>
+            <div class="absolute top-30% left-70% w-12 h-12 rounded-full bg-blue-300 animate-ping"></div>
+          </div>
+
+          <div class="relative z-10">
+            <h1
+              class="welcome_psd_vault text-[50px] font-bold text-gray-800 mb-4 leading-tight dark:text-white transform transition-transform duration-700">
+              <svg xmlns="http://www.w3.org/2000/svg"
+                class="w-[120px] h-[160px] mb-4 text-blue-500 dark:text-blue-400 transition-all duration-500 hover:text-blue-600 dark:hover:text-blue-300"
+                viewBox="0 0 640 640" fill="currentColor">
+                <path
+                  d="M320 312C386.3 312 440 258.3 440 192C440 125.7 386.3 72 320 72C253.7 72 200 125.7 200 192C200 258.3 253.7 312 320 312zM290.3 368C191.8 368 112 447.8 112 546.3C112 562.7 125.3 576 141.7 576H498.3C514.7 576 528 562.7 528 546.3C528 447.8 448.2 368 349.7 368H290.3z" />
+              </svg>
+              Welcome to <br><span
+                class="text-blue-600 dark:text-blue-400 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent transition-all duration-500 hover:from-blue-700 hover:to-indigo-700 dark:hover:from-blue-300 dark:hover:to-indigo-300">Password
+                Vault</span>
+            </h1>
+            <p
+              class="text-gray-600 dark:text-gray-300 mb-8 text-[20px] transition-all duration-500 hover:text-gray-800 dark:hover:text-white">
+              Store and manage your <br>passwords securely.</p>
+
+            <!-- Feature list -->
+            <ul class="space-y-3 mt-6">
+              <li
+                class="flex items-center text-gray-600 dark:text-gray-300 transition-colors duration-300 hover:text-gray-800 dark:hover:text-white">
+                <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Military-grade encryption
+              </li>
+              <li
+                class="flex items-center text-gray-600 dark:text-gray-300 transition-colors duration-300 hover:text-gray-800 dark:hover:text-white">
+                <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Cross-device synchronization
+              </li>
+              <li
+                class="flex items-center text-gray-600 dark:text-gray-300 transition-colors duration-300 hover:text-gray-800 dark:hover:text-white">
+                <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Biometric authentication
+              </li>
+            </ul>
+          </div>
+        </div>
+
+
+
+        <!-- Divider (Vertical Line) -->
+        <div class="hidden md:block w-px bg-gray-300 dark:bg-gray-600"></div>
+
+
+        <!-- Right Side -->
+        <div
+          class="w-full [@media(min-width:1001px)]:w-[53%] p-6 md:p-10 space-y-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          id="right_side">
+
+          <!-- Dashboard Section -->
+          <div
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:shadow-xl">
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600 dark:text-blue-400"
+                viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z"
+                  clip-rule="evenodd" />
+              </svg>
+              Add New Password
+            </h2>
+
+            <form id="password-form" class="space-y-4">
+              <div class="relative">
+                <input type="text" id="website" placeholder="Website"
+                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent transition-all duration-300 pl-10"
+                  required />
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-3 top-3.5 text-gray-400"
+                  viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
+                    clip-rule="evenodd" />
+                </svg>
+              </div>
+
+              <div class="relative">
+                <input type="text" id="username" placeholder="Username"
+                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent transition-all duration-300 pl-10"
+                  required />
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-3 top-3.5 text-gray-400"
+                  viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                    clip-rule="evenodd" />
+                </svg>
+              </div>
+
+              <div class="relative">
+                <input type="password" id="password" placeholder="Password"
+                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent transition-all duration-300 pl-10 pr-10"
+                  required />
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-3 top-3.5 text-gray-400"
+                  viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                    clip-rule="evenodd" />
+                </svg>
+                <button type="button" id="toggle-password"
+                  class="absolute right-3 top-3.5 text-gray-400 hover:text-blue-500 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fill-rule="evenodd"
+                      d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                      clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <button type="submit"
+                  class="bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-6 rounded-lg font-medium transition-all duration-300 flex items-center shadow-md hover:shadow-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clip-rule="evenodd" />
+                  </svg>
+                  Add Password
+                </button>
+
+
+              </div>
+            </form>
+          </div>
+
+          <!-- Password Table -->
+          <div
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 overflow-x-auto border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:shadow-xl"
+            id="password-table-container">
+
+
+            <table class="w-full text-left rounded-lg overflow-hidden">
+              <thead>
+                <tr class="text-gray-700 dark:text-gray-300 font-semibold bg-gray-100 dark:bg-gray-700">
+                  <th class="py-3 px-4">Website</th>
+                  <th class="py-3 px-4">Username</th>
+                  <th class="py-3 px-4">Password</th>
+                  <th class="py-3 px-4 ">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="password-table"
+                class="text-gray-800 dark:text-gray-200 divide-y divide-gray-200 dark:divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Action Menu Popup -->
+  <div id="action-menu-popup" class="action-menu-popup" style="position: absolute; left: 402px; top: 202px;">
+    <button class="copy-btn">
+      <i class="fas fa-copy" title="Copy to clipboard"></i>
+      Copy Password
+    </button>
+
+    <button class="toggle-btn">
+      <i class="far fa-eye"></i>
+      Show Password
+    </button>
+    <button class="edit-btn">
+      <i class="fas fa-edit"></i>
+      Edit
+    </button>
+    <button class="delete-btn text-red-600">
+      <i class="fas fa-trash"></i>
+
+      Delete
+    </button>
+  </div>
+
+  <!-- Copy notification -->
+  <div id="copy-notification" class="copy-notification">
+    Password copied to clipboard!
+  </div>
+
+  <!-- Deleted notification -->
+  <div id="deleted-notification" class="deleted-notification">
+    Password deleted successfully!
+  </div>
+
+  <!-- Edit notification -->
+  <div id="edit-notification" class="edit-notification">
+    Password updated successfully!
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // DOM Elements
+      const passwordForm = document.getElementById('password-form');
+      const passwordTable = document.getElementById('password-table');
+      const logoutBtn = document.getElementById('logoutBtn');
+      const logoutBtnn = document.getElementById('logoutBtnDesktop');
+      const copyNotification = document.getElementById('copy-notification');
+      const deletedNotification = document.getElementById('deleted-notification');
+      const editNotification = document.getElementById('edit-notification');
+      const editForm = document.getElementById('edit-form');
+      const editPasswordForm = document.getElementById('edit-password-form');
+      const cancelEdit = document.getElementById('cancel-edit');
+      const actionMenuPopup = document.getElementById('action-menu-popup');
+      const searchInput = document.getElementById('search-input');
+      const suggestionsBox = document.getElementById('search-suggestions');
+
+      // Demo password data
+      const demoPassword = {
+        id: 'demo_1',
+        website: 'Demo_😊',
+        username: 'abhi_fb',
+        password: 'fbpass123'
+      };
+
+      // Store all passwords for search/filter
+      let allPasswords = [];
+      let fullPasswordList = [];
+
+      // Check if user is new (no passwords in database)
+      async function isNewUser() {
+        try {
+          const response = await fetch('/api/passwords');
+          const data = await response.json();
+          return data.success && data.passwords.length === 0;
+        } catch (error) {
+          console.error('Error checking user status:', error);
+          return true; // Assume new user if error occurs
+        }
+      }
+
+      // Load passwords from backend
+      async function loadPasswords() {
+        try {
+          const userIsNew = await isNewUser();
+          const response = await fetch('/api/passwords');
+          const data = await response.json();
+
+          if (data.success) {
+            const passwordsToShow = userIsNew ? [demoPassword, ...data.passwords] : data.passwords;
+            fullPasswordList = passwordsToShow; // Always keep full list here
+            renderPasswords(fullPasswordList);
+          } else {
+            console.error('Error loading passwords:', data.error);
+            fullPasswordList = [demoPassword];
+            renderPasswords(fullPasswordList);
+          }
+        } catch (error) {
+          console.error('Failed to load passwords:', error);
+          fullPasswordList = [demoPassword];
+          renderPasswords(fullPasswordList);
+        }
+      }
+
+      // Render password table
+      function renderPasswords(passwords) {
+        allPasswords = passwords; // Store for search/filter
+        passwordTable.innerHTML = '';
+        passwords.forEach(pwd => {
+          const row = document.createElement('tr');
+          row.className = 'border-b';
+          row.dataset.id = pwd.id;
+          row.innerHTML = `
+        <td class="py-3 px-4">${pwd.website}</td>
+        <td class="py-3 px-4">${pwd.username}</td>
+        <td class="py-3 px-4 flex items-center gap-2">
+            <span class="password-field" data-password="${pwd.password}">******</span>
+      <td class="py-3 px-4">
+  <button class="menu-toggle" data-id="${pwd.id}">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6.35 6.35" 
+         class="h-5 w-5 text-gray-600 dark:text-gray-300">
+      <path fill="currentColor" d="M3.1747.3977c-1.5312 0-2.7771 1.2464-2.7771 2.7776 0 1.5312 1.246 2.7771 2.7771 2.7771 1.5312 0 2.7776-1.2459 2.7776-2.7771 0-1.5312-1.2464-2.7776-2.7776-2.7776zm-1.3007 1.4128h2.6029c.1465 0 .265.1186.265.2637a.265.265 0 0 1-.265.2636H1.874c-.1464 0-.265-.1186-.265-.2636s.1186-.2637.265-.2637zm0 1.1126h2.6029c.1465 0 .265.1186.265.2637a.265.265 0 0 1-.265.265H1.874c-.1464 0-.265-.1187-.265-.265 0-.1451.1186-.2637.265-.2637zm0 1.0888h2.6029c.1465 0 .265.1186.265.2638a.265.265 0 0 1-.265.265H1.874c-.1464 0-.265-.1186-.265-.265 0-.1452.1186-.2638.265-.2638z"/>
+    </svg>
+  </button>
+</td>
+
+
+      `;
+          // Row highlight on click
+          row.addEventListener('click', function (e) {
+            if (e.target.closest('.menu-toggle')) return;
+            document.querySelectorAll('#password-table tr').forEach(r => {
+              r.classList.remove('border-2', 'border-gray-200');
+            });
+            row.classList.add('border-2', 'border-gray-200');
+          });
+          passwordTable.appendChild(row);
+        });
+        // Update total passwords count
+        const totalPasswords = document.getElementById('total-passwords');
+        if (totalPasswords) totalPasswords.textContent = passwords.length;
+      }
+
+      // Initialize
+      loadPasswords();
+
+      // Search functionality
+      if (searchInput) {
+        searchInput.addEventListener('input', function () {
+          const term = searchInput.value.trim().toLowerCase();
+          if (!term) {
+            renderPasswords(fullPasswordList); // Use full list here
+            suggestionsBox.classList.add('hidden');
+            return;
+          }
+          // Find matching website names
+          const matches = fullPasswordList
+            .map(pwd => pwd.website)
+            .filter(site => site.toLowerCase().includes(term))
+            .filter((site, idx, arr) => arr.indexOf(site) === idx) // unique
+            .slice(0, 5); // limit to 5 suggestions
+
+          if (matches.length > 0) {
+            suggestionsBox.innerHTML = matches.map(site =>
+              `<div class="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">${site}</div>`
+            ).join('');
+            suggestionsBox.classList.remove('hidden');
+          } else {
+            suggestionsBox.classList.add('hidden');
+          }
+
+          // Filter table as you type
+          const filtered = fullPasswordList.filter(pwd =>
+            pwd.website.toLowerCase().includes(term)
+          );
+          renderPasswords(filtered);
+        });
+
+        // Handle click on suggestion
+        suggestionsBox.addEventListener('click', function (e) {
+          if (e.target && e.target.textContent) {
+            searchInput.value = e.target.textContent;
+            suggestionsBox.classList.add('hidden');
+            const term = searchInput.value.trim().toLowerCase();
+            const filtered = fullPasswordList.filter(pwd =>
+              pwd.website.toLowerCase().includes(term)
+            );
+            renderPasswords(filtered);
+          }
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function (e) {
+          if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+            suggestionsBox.classList.add('hidden');
+          }
+        });
+      }
+
+      // Theme toggle functionality
+      const themeToggleBtn = document.getElementById('theme-toggle-dashboard');
+      if (themeToggleBtn) {
+        // Set theme on page load
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else if (savedTheme === 'light') {
+          document.documentElement.classList.remove('dark');
+        }
+
+        // Toggle theme on button click
+        themeToggleBtn.addEventListener('click', function () {
+          document.documentElement.classList.toggle('dark');
+          if (document.documentElement.classList.contains('dark')) {
+            localStorage.setItem('theme', 'dark');
+          } else {
+            localStorage.setItem('theme', 'light');
+          }
+        });
+      }
+
+      // Toggle menu visibility
+      document.addEventListener('click', function (e) {
+        // Close menu when clicking elsewhere
+        if (!e.target.closest('.action-menu-popup') && !e.target.closest('.menu-toggle')) {
+          actionMenuPopup.classList.remove('show');
+        }
+
+        // Open clicked menu
+        if (e.target.classList.contains('menu-toggle') || e.target.closest('.menu-toggle')) {
+          const button = e.target.classList.contains('menu-toggle') ?
+            e.target : e.target.closest('.menu-toggle');
+          const rect = button.getBoundingClientRect();
+
+          // Calculate position for all devices
+          let left = rect.left + window.scrollX;
+          let top = rect.bottom + window.scrollY + 4; // 4px gap below button
+
+          // Adjust if menu would overflow right edge
+          const menuWidth = 170; // Approximate width of your menu
+          if (left + menuWidth > window.innerWidth) {
+            left = window.innerWidth - menuWidth - 10; // 10px margin from right
+          }
+
+          // Adjust if menu would overflow bottom edge
+          const menuHeight = 180; // Approximate height of your menu
+          if (top + menuHeight > window.innerHeight + window.scrollY) {
+            top = rect.top + window.scrollY - menuHeight - 4; // Show above button
+          }
+
+          actionMenuPopup.style.left = left + 'px';
+          actionMenuPopup.style.top = top + 'px';
+
+          actionMenuPopup.dataset.id = button.dataset.id;
+          actionMenuPopup.classList.add('show');
+          e.stopPropagation();
+        }
+      });
+
+      // Handle menu actions
+      document.addEventListener('click', async function (e) {
+        // Copy password
+        if (e.target.classList.contains('copy-btn') || e.target.closest('.copy-btn')) {
+          const rowId = actionMenuPopup.dataset.id;
+          const row = document.querySelector(`tr[data-id="${rowId}"]`);
+          const password = row.querySelector('.password-field').dataset.password;
+
+          navigator.clipboard.writeText(password).then(() => {
+            showNotification(copyNotification);
+            actionMenuPopup.classList.remove('show');
+          });
+        }
+
+        // Toggle password visibility
+        if (e.target.classList.contains('toggle-btn') || e.target.closest('.toggle-btn')) {
+          const rowId = actionMenuPopup.dataset.id;
+          const row = document.querySelector(`tr[data-id="${rowId}"]`);
+          const passwordField = row.querySelector('.password-field');
+          const button = e.target.classList.contains('toggle-btn') ?
+            e.target : e.target.closest('.toggle-btn');
+
+          if (passwordField.textContent === '******') {
+            passwordField.textContent = passwordField.dataset.password;
+            button.innerHTML = '<i class="far fa-eye-slash"></i> Hide Password';
+          } else {
+            passwordField.textContent = '******';
+            button.innerHTML = '<i class="far fa-eye"></i> Show Password';
+          }
+          actionMenuPopup.classList.remove('show');
+        }
+
+        // Edit password
+        if (e.target.classList.contains('edit-btn') || e.target.closest('.edit-btn')) {
+          const rowId = actionMenuPopup.dataset.id;
+          const row = document.querySelector(`tr[data-id="${rowId}"]`);
+
+          document.getElementById('edit-id').value = rowId;
+          document.getElementById('edit-website').value = row.cells[0].textContent;
+          document.getElementById('edit-username').value = row.cells[1].textContent;
+          document.getElementById('edit-password').value = row.querySelector('.password-field').dataset.password;
+
+          editForm.classList.add('show');
+          actionMenuPopup.classList.remove('show');
+        }
+
+        // Delete password
+        if (e.target.classList.contains('delete-btn') || e.target.closest('.delete-btn')) {
+          const rowId = actionMenuPopup.dataset.id;
+
+          if (confirm('Are you sure you want to delete this password?')) {
+            try {
+              // Check if it's the demo password
+              if (rowId === demoPassword.id) {
+                // Just remove from UI, don't call backend
+                document.querySelector(`tr[data-id="${rowId}"]`).remove();
+                showNotification(deletedNotification);
+              } else {
+                // Real password - delete from backend
+                const response = await fetch(`/api/passwords/${rowId}`, {
+                  method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                  loadPasswords(); // Refresh the list
+                  showNotification(deletedNotification);
+                } else {
+                  console.error('Error deleting password:', data.error);
+                }
+              }
+            } catch (error) {
+              console.error('Failed to delete password:', error);
+            }
+          }
+          actionMenuPopup.classList.remove('show');
+        }
+      });
+
+      // Add new password
+      passwordForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const website = document.getElementById('website').value;
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        if (!website || !username || !password) {
+          alert('Please fill in all fields');
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/passwords', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              website,
+              username,
+              password
+            })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            loadPasswords(); // Refresh the list
+            passwordForm.reset();
+          } else {
+            alert('Failed to save password: ' + (data.error || 'Unknown error'));
+          }
+        } catch (error) {
+          console.error('Failed to save password:', error);
+          alert('Failed to save password');
+        }
+      });
+
+      // Edit password form
+      editPasswordForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const id = document.getElementById('edit-id').value;
+        const website = document.getElementById('edit-website').value;
+        const username = document.getElementById('edit-username').value;
+        const password = document.getElementById('edit-password').value;
+
+        try {
+          const response = await fetch(`/api/passwords/${id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              website,
+              username,
+              password
+            })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            loadPasswords(); // Refresh the list
+            editForm.classList.remove('show');
+            showNotification(editNotification);
+          } else {
+            alert('Failed to update password: ' + (data.error || 'Unknown error'));
+          }
+        } catch (error) {
+          console.error('Failed to update password:', error);
+          alert('Failed to update password');
+        }
+      });
+
+      // Cancel edit
+      cancelEdit.addEventListener('click', function () {
+        editForm.classList.remove('show');
+      });
+
+      // Show notification
+      function showNotification(notificationElement) {
+        notificationElement.classList.add('show');
+        setTimeout(() => {
+          notificationElement.classList.remove('show');
+        }, 2000);
+      }
+
+      // Initialize Firebase
+      const firebaseConfig = {
+        apiKey: "AIzaSyCbudfv-65ZnXFu61eZiaivHOCuWYIL0ck",
+        authDomain: "password-vault-8dad1.firebaseapp.com",
+        projectId: "password-vault-8dad1",
+        storageBucket: "password-vault-8dad1.firebasestorage.app",
+        messagingSenderId: "329082512447",
+        appId: "1:329082512447:web:6dc11852e51acd40c5c48a"
+      };
+
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+
+      // Logout function (mobile)
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', async function () {
+          try {
+            logoutBtn.disabled = true;
+            await firebase.auth().signOut();
+            const response = await fetch('/logout', {
+              method: 'POST',
+              credentials: 'same-origin'
+            });
+            if (!response.ok) throw new Error("Server error during logout");
+            window.location.href = '/';
+          } catch (error) {
+            console.error('Logout error:', error);
+            alert('Error during logout: ' + error.message);
+            logoutBtn.disabled = false;
+          }
+        });
+      }
+
+      // Logout function (desktop)
+      if (logoutBtnn) {
+        logoutBtnn.addEventListener('click', async function () {
+          try {
+            logoutBtnn.disabled = true;
+            // Show loading overlay
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+
+            // Optionally also show spinner on button
+            logoutBtnn.innerHTML = `
+        <svg class="animate-spin h-5 w-5 mr-2 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+        </svg>
+        Logging out...
+      `;
+            await firebase.auth().signOut();
+            const response = await fetch('/logout', {
+              method: 'POST',
+              credentials: 'same-origin'
+            });
+            if (!response.ok) throw new Error("Server error during logout");
+            window.location.href = '/';
+          } catch (error) {
+            console.error('Logout error:', error);
+            alert('Error during logout: ' + error.message);
+            logoutBtnn.disabled = false;
+            // Hide loading overlay if error
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) loadingOverlay.classList.add('hidden');
+            // Restore original button text
+            logoutBtnn.innerHTML = `
+        <i class="fas fa-sign-out-alt"></i>
+        <span class="hidden sm:inline">Logout</span>
+      `;
+          }
+        });
+      }
+    });
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+
+
+
+
+
+
+      // eyes show and close eye icon
+
+
+
+      // Toggle password visibility in Add Password form
+      const passwordInput = document.getElementById('password');
+      const togglePasswordBtn = document.getElementById('toggle-password');
+      let passwordVisible = false;
+
+      if (togglePasswordBtn && passwordInput) {
+        togglePasswordBtn.addEventListener('click', function () {
+          passwordVisible = !passwordVisible;
+          passwordInput.type = passwordVisible ? 'text' : 'password';
+          togglePasswordBtn.innerHTML = passwordVisible
+            ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 011.992-3.428m3.387-2.665A9.956 9.956 0 0112 5c4.478 0 8.268 2.943 9.542 7a9.97 9.97 0 01-4.07 5.202M15 12a3 3 0 11-6 0 3 3 0 016 0zM3 3l18 18" />
+</svg>
+`
+            : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+          </svg>`;
+        });
+      }
+
+      // ...existing code...
+    });
+
+
+
+    // warring of notification 
+    // Show modal after page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const modalContent = document.getElementById('modalContent');
+      modalContent.classList.remove('opacity-0', 'scale-90'); // show modal
+      modalContent.classList.add('scale-100', 'opacity-100');
+    });
+
+    // Close button
+    const closeBtn = document.getElementById('closeBtn');
+    closeBtn.addEventListener('click', () => {
+      const modalContent = document.getElementById('modalContent');
+      modalContent.classList.add('opacity-0', 'scale-90'); // hide modal
+      setTimeout(() => {
+        document.getElementById('warningModal').style.display = 'none';
+      }, 300); // match transition duration
+    });
+
+
+  </script>
+
+</body>
+
+
+</html>
