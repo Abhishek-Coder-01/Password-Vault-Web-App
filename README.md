@@ -26,20 +26,24 @@ A **secure** and **user-friendly** web application to store, manage, and retriev
 
 ## 📸 Screenshots
 
-**Home Page**  
+### 🏠 Home Page
 <img width="800" src="https://github.com/user-attachments/assets/e8becd1d-f3f7-46f1-b494-936a329cac54" />
 
-**Login Page**  
+### 🔑 Login Page
 <img width="800" src="https://github.com/user-attachments/assets/7b743351-013b-439e-bd14-25f0f00c3c65" />
 
-**Dashboard Page**  
+### 📊 Dashboard Page
 <img width="800" src="https://github.com/user-attachments/assets/d0c14011-30b1-4567-8a42-6de695748862" />
+
+### 👤 Account Page
+<img width="800" src="https://github.com/user-attachments/assets/859a1465-65fc-4dcd-a61a-59d75b6e2c6b" />
 
 ---
 
 ## ⚡ Live Demo
 
-Check out the live app [here](https://password-vault-web-app.onrender.com/)
+🌐 Check out the live app here: [Password Vault Web App](https://password-vault-web-app.onrender.com/)
+
 
 ---
 
