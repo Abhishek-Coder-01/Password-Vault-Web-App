@@ -1717,7 +1717,7 @@ End-to-end protection using AES-256 and zero-knowledge security.
                                 </div>
                                 <form id="feedbackForm" class="md:w-1/2 w-full">
                                     <div class="flex flex-col sm:flex-row gap-4">
-                                        <input type="text" name="user_email" placeholder="Enter your Feedback"
+                                        <input type="text" name="message" placeholder="Enter your Feedback"
                                             class="flex-1 bg-gray-900 dark:bg-slate-800 border border-gray-700 dark:border-slate-600 rounded-xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-500 dark:placeholder-slate-400"
                                             required>
                                         <button id="submitBtn" type="submit"
@@ -1758,7 +1758,7 @@ End-to-end protection using AES-256 and zero-knowledge security.
                         <div
                             class="border-t border-gray-800 dark:border-slate-700 pt-8 flex flex-col md:flex-row justify-between items-center">
                             <p class="text-gray-500 dark:text-slate-500 text-sm mb-4 md:mb-0">
-                                &copy; 2023 Password_vault. All rights reserved.
+                                &copy; 2025 Password_vault. All rights reserved.
                             </p>
                             <div class="flex flex-wrap justify-center gap-4 md:gap-6">
                                 <a href="#"
@@ -3409,7 +3409,7 @@ End-to-end protection using AES-256 and zero-knowledge security.
                     e.preventDefault();
 
                     // 🔄 Show "Submitting..." with spinner
-                    btnText.textContent = "Submtting... ";
+                    btnText.textContent = "Loading... ";
                     spinner.classList.remove("hidden");
 
                     emailjs.sendForm("service_7ipfx1u", "template_qy0cdnt", this)
